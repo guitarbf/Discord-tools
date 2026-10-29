@@ -18,23 +18,42 @@ A privacy-first [Vencord](https://vencord.dev) userplugin for previewing and del
 
 ## Install
 
-You need a local Vencord checkout built from source ([Vencord docs: installing from source](https://docs.vencord.dev/installing/)).
+### Installer (recommended)
+
+Download the installer for your system from the repo's Releases page and open it:
+
+| System | File |
+|---|---|
+| Windows | `PrivacyCleanupInstaller-windows-x64.exe` (`-arm64` for ARM PCs) |
+| macOS | `PrivacyCleanupInstaller-macos-apple-silicon.zip` or `-intel.zip`; unzip, then right-click → Open |
+| Linux | `PrivacyCleanupInstaller-linux-x64` (`chmod +x`, then run) |
+
+It opens a small window, checks your system, shows exactly what it will do and download, and installs with one click:
+
+1. Finds Discord, any existing Vencord (standard or built from source), Git and Node.js.
+2. Installs missing Git/Node.js with winget (Windows) or Homebrew (macOS), after asking.
+3. Downloads Vencord's source if you don't have it, installs its dependencies and builds it with the plugin included.
+4. Adds Vencord to Discord using Vencord's official installer, turns PrivacyCleanup on, and restarts Discord.
+
+Running it again updates the plugin. The *Advanced* section can update Vencord, remove the plugin, or remove Vencord from Discord. `--cli` runs it in a terminal instead.
+
+The plugin itself is bundled inside the installer. The installer makes no network requests of its own; downloads are done by Git, npm and Vencord's installer, and are listed before you start. Its window talks only to a local server bound to `127.0.0.1`, protected by a random per-launch token. The binaries are unsigned, so Windows SmartScreen and macOS Gatekeeper will warn the first time.
+
+Build the installers yourself with `installer/build.sh` (needs Go). Pushing a `v*` tag builds them and attaches them to a GitHub release.
+
+### Manual
+
+With a Vencord checkout built from source ([Vencord docs](https://docs.vencord.dev/installing/)):
 
 ```bash
-git clone <this repo> privacy-cleanup
-```
-
-```bash
-node privacy-cleanup/scripts/install-plugin.mjs /path/to/Vencord
+node scripts/install-plugin.mjs /path/to/Vencord
 ```
 
 ```bash
 cd /path/to/Vencord && pnpm build && pnpm inject
 ```
 
-Restart Discord, enable **PrivacyCleanup** under *Vencord → Plugins*, then open **Settings → Message Cleanup**. The full panel is also under the plugin's settings button.
-
-The install script only copies `index.tsx`, `style.css` and `src/` into `Vencord/src/userplugins/privacyCleanup`. It makes no network requests.
+Then enable **PrivacyCleanup** under *Vencord → Plugins* and open **Settings → Message Cleanup**.
 
 ## How a cleanup works
 
@@ -120,6 +139,7 @@ src/
   ui/                     React components (plain elements styled with Discord theme variables)
   utils/
 tests/                    Vitest suites, including the static privacy audit
+installer/                Go installer (detects Discord/Vencord, builds, injects, enables)
 typings/                  Type shims for standalone type-checking (not copied into Vencord)
 ```
 

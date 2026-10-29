@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PrivacyCleanup Installer</title>
+<style>
+:root {
+  --bg: #1e1f22; --card: #2b2d31; --inset: #232428; --text: #dbdee1; --head: #f2f3f5; --muted: #949ba4;
+  --brand: #5865f2; --good: #23a55a; --warn: #f0b232; --bad: #da373c; --line: rgb(255 255 255 / 8%);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root { --bg: #f2f3f5; --card: #ffffff; --inset: #ebedef; --text: #2e3338; --head: #060607; --muted: #5c5e66; --line: rgb(0 0 0 / 10%); color-scheme: light; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 20px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+header { display: flex; align-items: center; gap: 12px; }
+header svg { color: var(--good); flex: none; }
+h1 { margin: 0; font-size: 20px; color: var(--head); }
+.sub { color: var(--muted); font-size: 13px; }
+.card { background: var(--card); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.card h2 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.row { display: flex; align-items: flex-start; gap: 10px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex: none; background: var(--muted); }
+.dot.ok { background: var(--good); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
+.title { font-weight: 600; color: var(--head); }
+.detail { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+label.field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+input[type=text], select { width: 100%; background: var(--inset); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font: inherit; text-transform: none; font-weight: 400; }
+label.check { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+label.check input { margin-top: 3px; accent-color: var(--brand); }
+button { border: none; border-radius: 6px; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; color: #fff; background: #4e5058; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.primary { background: var(--brand); font-size: 16px; padding: 12px 20px; }
+button.danger { background: var(--bad); }
+button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+ol.plan { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+ol.plan .detail { margin-left: 6px; }
+.notice { border-left: 4px solid var(--brand); background: var(--inset); border-radius: 6px; padding: 10px 12px; }
+.notice.warn { border-color: var(--warn); } .notice.bad { border-color: var(--bad); } .notice.good { border-color: var(--good); }
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.steps li { display: flex; gap: 10px; align-items: center; }
+.badge { font-size: 11px; font-weight: 700; text-transform: uppercase; width: 70px; color: var(--muted); }
+.badge.running { color: var(--brand); } .badge.done { color: var(--good); } .badge.failed { color: var(--bad); }
+pre.log { margin: 0; max-height: 280px; overflow: auto; background: var(--inset); border-radius: 6px; padding: 10px; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+pre.log .cmd { color: var(--brand); } pre.log .error { color: var(--bad); } pre.log .ok { color: var(--good); } pre.log .step { color: var(--head); font-weight: 700; }
+details summary { cursor: pointer; color: var(--muted); }
+.hidden { display: none !important; }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--brand); border-radius: 50%; animation: spin .8s linear infinite; display: inline-block; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 4 5v6c0 5.25 3.4 10.15 8 11.4 4.6-1.25 8-6.15 8-11.4V5l-8-3Zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.6-4.6 1.4 1.4-6 6Z"/></svg>
+    <div>
+      <h1>PrivacyCleanup Installer</h1>
+      <div class="sub" id="version">Checking your system…</div>
+    </div>
+  </header>
+
+  <section class="card" id="checks">
+    <h2>Your system</h2>
+    <div id="checkList"><span class="spinner"></span> Checking…</div>
+  </section>
+
+  <section class="card hidden" id="setup">
+    <h2>Setup</h2>
+    <label class="field hidden" id="discordField">Discord
+      <select id="discordSelect"></select>
+    </label>
+    <label class="field">Vencord folder
+      <input type="text" id="vencordDir" spellcheck="false">
+    </label>
+    <label class="check hidden" id="prereqField"><input type="checkbox" id="installPrereqs" checked><span id="prereqLabel"></span></label>
+    <label class="check"><input type="checkbox" id="restartDiscord" checked><span>Close and reopen Discord when done</span></label>
+    <div id="planBox"></div>
+    <div class="actions">
+      <button class="primary" id="installBtn" disabled>Install</button>
+      <button class="ghost" id="recheckBtn">Check again</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="progress">
+    <h2>Progress</h2>
+    <ul class="steps" id="stepList"></ul>
+    <div id="result"></div>
+    <details id="logDetails">
+      <summary>Details</summary>
+      <pre class="log" id="log"></pre>
+    </details>
+    <div class="actions">
+      <button class="danger" id="cancelBtn">Cancel</button>
+      <button class="ghost hidden" id="backBtn">Back</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="advanced">
+    <details>
+      <summary>Advanced</summary>
+      <div class="actions" style="margin-top:10px">
+        <button id="updateVencordBtn">Update Vencord</button>
+        <button id="removePluginBtn">Remove PrivacyCleanup</button>
+        <button class="danger" id="removeVencordBtn">Remove Vencord from Discord</button>
+      </div>
+    </details>
+  </section>
+
+  <div class="actions" style="justify-content:space-between">
+    <span class="sub">Nothing is sent anywhere by this installer. Downloads are listed before you install.</span>
+    <button class="ghost" id="quitBtn">Quit</button>
+  </div>
+</main>
+
+<script nonce="{{NONCE}}">
+"use strict";
+const token = new URLSearchParams(location.search).get("t") || "";
+history.replaceState(null, "", "/");
+const $ = id => document.getElementById(id);
+let status = null, plan = null, polling = false, planTimer = 0;
+
+async function api(path, body) {
+  const res = await fetch("/api/" + path, {
+    method: "POST",
+    headers: { "X-Token": token, "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Request failed");
+  return data;
+}
+
+function el(tag, attrs, ...children) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "class") n.className = v; else n.setAttribute(k, v);
+  }
+  for (const c of children) if (c != null) n.append(c);
+  return n;
+}
+
+function check(level, title, detail) {
+  return el("div", { class: "row" }, el("span", { class: "dot " + level }),
+    el("div", {}, el("div", { class: "title" }, title), detail ? el("div", { class: "detail" }, detail) : null));
+}
+
+function selectedDiscord() {
+  if (!status || !status.discords) return null;
+  const p = $("discordSelect").value;
+  return status.discords.find(d => d.path === p) || status.discords[0] || null;
+}
+
+function selectedCheckout() {
+  const dir = $("vencordDir").value.trim();
+  return (status.checkouts || []).find(c => c.path === dir) || null;
+}
+
+function request() {
+  const d = selectedDiscord();
+  return {
+    vencordDir: $("vencordDir").value.trim(),
+    discordPath: d ? d.path : "",
+    installPrereqs: $("installPrereqs").checked,
+    restartDiscord: $("restartDiscord").checked
+  };
+}
+
+function renderChecks() {
+  const list = $("checkList");
+  list.replaceChildren();
+  const discords = status.discords || [];
+  if (!discords.length) {
+    list.append(check("bad", "Discord not found", "Install the Discord desktop app from discord.com/download, open it once, then click Check again."));
+  } else {
+    for (const d of discords) list.append(check("ok", "Discord " + d.branch, d.path));
+  }
+
+  const d = selectedDiscord();
+  if (d) {
+    if (d.kind === "source") list.append(check("ok", "Vencord is installed", "Built from source at " + d.vencordDir));
+    else if (d.kind === "official") list.append(check("warn", "Standard Vencord is installed",
+      "Custom plugins need Vencord built from source. The installer sets that up and switches Discord over. Your Vencord settings are kept."));
+    else if (d.kind === "other") list.append(check("warn", "Discord is modified by something else",
+      "Another client mod is installed. Vencord's installer will replace it."));
+    else if ((status.checkouts || []).length) list.append(check("warn", "Vencord isn't added to Discord yet",
+      "Source found at " + status.checkouts[0].path + ". The installer builds it and adds it to Discord."));
+    else list.append(check("warn", "Vencord isn't installed",
+      "PrivacyCleanup needs Vencord. The installer downloads and builds it for you."));
+  }
+
+  for (const t of [status.git, status.node]) {
+    if (t.ok) list.append(check("ok", t.name + " " + t.version, t.path));
+    else list.append(check("bad", t.name + (t.found ? " " + t.version : "") + " missing", t.note || "Needed to build Vencord."));
+  }
+
+  const c = selectedCheckout();
+  if (c && c.pluginVersion) {
+    const same = c.pluginVersion === status.bundledVersion;
+    list.append(check(same ? "ok" : "warn", "PrivacyCleanup " + c.pluginVersion + " installed",
+      same ? "Up to date." : "Version " + status.bundledVersion + " is available."));
+  } else {
+    list.append(check("warn", "PrivacyCleanup isn't installed", "Version " + status.bundledVersion + " is ready to install."));
+  }
+}
+
+function renderSetup() {
+  $("setup").classList.remove("hidden");
+  $("advanced").classList.toggle("hidden", !(status.checkouts || []).length);
+  const sel = $("discordSelect");
+  const prev = sel.value;
+  sel.replaceChildren(...(status.discords || []).map(d => el("option", { value: d.path }, "Discord " + d.branch + " · " + d.path)));
+  if (prev) sel.value = prev;
+  $("discordField").classList.toggle("hidden", (status.discords || []).length < 2);
+  if (!$("vencordDir").value) $("vencordDir").value = status.suggestedDir;
+  const missing = [!status.git.ok && "Git", !status.node.ok && "Node.js"].filter(Boolean);
+  $("prereqField").classList.toggle("hidden", !missing.length || !status.packageManager);
+  $("prereqLabel").textContent = "Install missing tools (" + missing.join(" and ") + ") with " + status.packageManager;
+}
+
+function renderPlan() {
+  const box = $("planBox");
+  box.replaceChildren();
+  const btn = $("installBtn");
+  if (!plan) return;
+  if (plan.blocker) {
+    box.append(el("div", { class: "notice bad" }, plan.blocker));
+    btn.disabled = true;
+    return;
+  }
+  const ol = el("ol", { class: "plan" }, ...plan.steps.map(s => el("li", {}, s.title, s.note ? el("span", { class: "detail" }, s.note) : null)));
+  box.append(el("div", { class: "title" }, "What will happen"), ol);
+  if (plan.downloads && plan.downloads.length) {
+    box.append(el("div", { class: "detail" }, "Downloads: " + plan.downloads.join("; ") + "."));
+  }
+  const c = selectedCheckout();
+  btn.textContent = c && c.pluginVersion ? (c.pluginVersion === status.bundledVersion ? "Reinstall PrivacyCleanup" : "Update PrivacyCleanup") : "Install PrivacyCleanup";
+  btn.disabled = false;
+}
+
+async function refreshPlan() {
+  try {
+    plan = await api("plan", request());
+  } catch (e) {
+    plan = { blocker: e.message, steps: [] };
+  }
+  renderPlan();
+}
+
+function schedulePlan() {
+  clearTimeout(planTimer);
+  planTimer = setTimeout(() => { renderChecks(); refreshPlan(); }, 250);
+}
+
+async function loadStatus() {
+  $("checkList").replaceChildren(el("span", { class: "spinner" }), " Checking…");
+  status = await api("status");
+  $("version").textContent = "Version " + status.bundledVersion + " · " + ({ windows: "Windows", darwin: "macOS", linux: "Linux" }[status.os] || status.os);
+  renderSetup();
+  renderChecks();
+  await refreshPlan();
+}
+
+const STEP_LABEL = { pending: "Waiting", running: "Running", done: "Done", failed: "Failed", skipped: "Skipped" };
+
+function renderJob(job) {
+  $("stepList").replaceChildren(...job.steps.map(s => el("li", {},
+    el("span", { class: "badge " + s.status }, s.status === "running" ? el("span", { class: "spinner" }) : STEP_LABEL[s.status]),
+    el("span", {}, s.title))));
+  const log = $("log");
+  const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
+  log.replaceChildren(...job.log.map(l => el("div", { class: l.kind }, l.text)));
+  if (atBottom) log.scrollTop = log.scrollHeight;
+  $("cancelBtn").classList.toggle("hidden", !job.running);
+  $("backBtn").classList.toggle("hidden", job.running);
+  const result = $("result");
+  result.replaceChildren();
+  if (!job.running && job.done) {
+    result.append(el("div", { class: "notice good" }, job.action === "install"
+      ? "PrivacyCleanup is installed and turned on. In Discord, open Settings → Message Cleanup."
+      : "Finished."));
+  } else if (!job.running && job.error) {
+    result.append(el("div", { class: "notice bad" }, job.error));
+    $("logDetails").open = true;
+  }
+}
+
+async function pollJob() {
+  if (polling) return;
+  polling = true;
+  try {
+    for (;;) {
+      const job = await api("job");
+      renderJob(job);
+      if (!job.running) break;
+      await new Promise(r => setTimeout(r, 700));
+    }
+  } finally {
+    polling = false;
+  }
+}
+
+async function start(action, confirmText) {
+  if (confirmText && !confirm(confirmText)) return;
+  try {
+    await api("run", Object.assign({ action }, request()));
+  } catch (e) {
+    alert(e.message);
+    return;
+  }
+  $("setup").classList.add("hidden");
+  $("advanced").classList.add("hidden");
+  $("progress").classList.remove("hidden");
+  $("logDetails").open = false;
+  pollJob();
+}
+
+$("installBtn").addEventListener("click", () => start("install",
+  $("restartDiscord").checked ? "Discord will be closed and reopened during setup. Continue?" : null));
+$("recheckBtn").addEventListener("click", () => loadStatus().catch(e => alert(e.message)));
+$("cancelBtn").addEventListener("click", () => api("cancel").catch(() => {}));
+$("backBtn").addEventListener("click", () => {
+  $("progress").classList.add("hidden");
+  loadStatus().catch(e => alert(e.message));
+});
+$("updateVencordBtn").addEventListener("click", () => start("updateVencord", "Download the latest Vencord source and rebuild?"));
+$("removePluginBtn").addEventListener("click", () => start("removePlugin", "Remove PrivacyCleanup from Vencord? Its local data in Discord stays until you use Delete All Local Data in the plugin first."));
+$("removeVencordBtn").addEventListener("click", () => start("removeVencord", "Remove Vencord from Discord? Discord goes back to normal. Your Vencord folder isn't deleted."));
+$("quitBtn").addEventListener("click", async () => {
+  try {
+    await api("quit");
+    document.body.replaceChildren(el("main", {}, el("p", {}, "The installer has closed. You can close this window.")));
+    window.close();
+  } catch (e) {
+    alert(e.message);
+  }
+});
+for (const id of ["vencordDir", "installPrereqs", "restartDiscord", "discordSelect"]) {
+  $(id).addEventListener(id === "vencordDir" ? "input" : "change", schedulePlan);
+}
+setInterval(() => api("ping").catch(() => {}), 3000);
+
+(async () => {
+  try {
+    const job = await api("job");
+    if (job.running) {
+      $("progress").classList.remove("hidden");
+      pollJob();
+    }
+    await loadStatus();
+  } catch (e) {
+    $("checkList").replaceChildren(el("div", { class: "notice bad" }, e.message));
+  }
+})();
+</script>
+</body>
+</html>
