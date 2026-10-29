@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode/utf16"
 )
@@ -47,7 +48,13 @@ type resource struct {
 
 func main() {
 	version := strings.TrimSpace(readFile("payload/VERSION"))
-	parts := strings.Split(version+".0.0", ".")[:3]
+	numeric, _, _ := strings.Cut(version, "-")
+	parts := strings.Split(numeric+".0.0", ".")[:3]
+	for i, p := range parts {
+		if _, err := strconv.Atoi(p); err != nil {
+			parts[i] = "0"
+		}
+	}
 	var res []resource
 	var group bytes.Buffer
 	le(&group, uint16(0), uint16(1), uint16(len(sizes)))
