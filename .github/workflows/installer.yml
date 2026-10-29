@@ -3,10 +3,15 @@ name: Installer
 on:
   push:
     tags: ["v*"]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: installer-${{ github.event.release.tag_name || github.ref_name }}
 
 jobs:
   build:
@@ -24,7 +29,12 @@ jobs:
       - if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || github.ref_name }}
         run: |
-          flags=""
-          case "$GITHUB_REF_NAME" in *-*) flags="--prerelease" ;; esac
-          gh release create "$GITHUB_REF_NAME" installer/dist/* --title "$GITHUB_REF_NAME" --notes-file .github/release-notes.md $flags
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" installer/dist/* --clobber
+          else
+            flags=""
+            case "$TAG" in *-*) flags="--prerelease" ;; esac
+            gh release create "$TAG" installer/dist/* --title "$TAG" --notes-file .github/release-notes.md $flags
+          fi
