@@ -14,7 +14,8 @@ GOOS=linux GOARCH=arm64 go build -trimpath -ldflags "$LDFLAGS" -o dist/PrivacyCl
 for arch in arm64 amd64; do
   name="PrivacyCleanup Installer.app"
   root="dist/mac-$arch/$name"
-  mkdir -p "$root/Contents/MacOS"
+  mkdir -p "$root/Contents/MacOS" "$root/Contents/Resources"
+  cp macos/icon.icns "$root/Contents/Resources/icon.icns"
   GOOS=darwin GOARCH=$arch go build -trimpath -ldflags "$LDFLAGS" -o "$root/Contents/MacOS/installer" .
   sed "s/{{VERSION}}/$VERSION/" macos/Info.plist > "$root/Contents/Info.plist"
   label=$([ "$arch" = arm64 ] && echo apple-silicon || echo intel)

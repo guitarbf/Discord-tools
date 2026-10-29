@@ -22,17 +22,25 @@ type Tool struct {
 	Note    string `json:"note"`
 }
 
-func knownLocations(name string) []string {
+func knownLocations(goos, name string) []string {
 	home, _ := os.UserHomeDir()
-	switch runtime.GOOS {
+	switch goos {
 	case "windows":
 		pf := os.Getenv("ProgramFiles")
 		pf86 := os.Getenv("ProgramFiles(x86)")
 		local := os.Getenv("LOCALAPPDATA")
-		if name == "git" {
+		roaming := os.Getenv("APPDATA")
+		switch name {
+		case "git":
 			return []string{filepath.Join(pf, "Git", "cmd", "git.exe"), filepath.Join(pf86, "Git", "cmd", "git.exe"), filepath.Join(local, "Programs", "Git", "cmd", "git.exe")}
+		case "node":
+			return []string{filepath.Join(pf, "nodejs", "node.exe"), filepath.Join(pf86, "nodejs", "node.exe"), filepath.Join(local, "Programs", "nodejs", "node.exe")}
+		case "pnpm":
+			return []string{filepath.Join(local, "pnpm", "pnpm.exe"), filepath.Join(roaming, "npm", "pnpm.cmd")}
+		case "winget":
+			return []string{filepath.Join(local, "Microsoft", "WindowsApps", "winget.exe")}
 		}
-		return []string{filepath.Join(pf, "nodejs", "node.exe"), filepath.Join(pf86, "nodejs", "node.exe"), filepath.Join(local, "Programs", "nodejs", "node.exe")}
+		return nil
 	case "darwin":
 		return []string{"/opt/homebrew/bin/" + name, "/usr/local/bin/" + name, "/usr/bin/" + name}
 	default:
@@ -44,7 +52,7 @@ func findBinary(name string) string {
 	if p, err := exec.LookPath(name); err == nil {
 		return p
 	}
-	for _, p := range knownLocations(name) {
+	for _, p := range knownLocations(runtime.GOOS, name) {
 		if p != "" && exists(p) {
 			return p
 		}
@@ -95,7 +103,7 @@ func detectNode() Tool {
 func packageManager() string {
 	switch runtime.GOOS {
 	case "windows":
-		if findBinary("winget") != "" || exists(filepath.Join(os.Getenv("LOCALAPPDATA"), "Microsoft", "WindowsApps", "winget.exe")) {
+		if findBinary("winget") != "" {
 			return "winget"
 		}
 	case "darwin":
@@ -107,10 +115,7 @@ func packageManager() string {
 }
 
 func wingetPath() string {
-	if p := findBinary("winget"); p != "" {
-		return p
-	}
-	return filepath.Join(os.Getenv("LOCALAPPDATA"), "Microsoft", "WindowsApps", "winget.exe")
+	return findBinary("winget")
 }
 
 func pnpmVersion(vencordDir string) string {
@@ -132,21 +137,20 @@ func pnpmCommand(node Tool, vencordDir string) (string, []string) {
 	if p := findBinary("pnpm"); p != "" {
 		return p, nil
 	}
-	npx := "npx"
-	if node.Path != "" {
-		name := "npx"
-		if isWindows() {
-			name = "npx.cmd"
-		}
-		if p := filepath.Join(filepath.Dir(node.Path), name); exists(p) {
-			npx = p
-		}
-	}
 	spec := "pnpm"
 	if v := pnpmVersion(vencordDir); v != "" {
 		spec += "@" + v
 	}
-	return npx, []string{"--yes", spec}
+	if node.Path != "" {
+		cli := filepath.Join(filepath.Dir(node.Path), "node_modules", "npm", "bin", "npx-cli.js")
+		if !exists(cli) {
+			cli = filepath.Join(filepath.Dir(filepath.Dir(node.Path)), "lib", "node_modules", "npm", "bin", "npx-cli.js")
+		}
+		if exists(cli) {
+			return node.Path, []string{cli, "--yes", spec}
+		}
+	}
+	return "npx", []string{"--yes", spec}
 }
 
 func toolPathEnv(tools ...Tool) []string {

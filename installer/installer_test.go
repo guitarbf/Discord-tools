@@ -251,3 +251,34 @@ func TestStripANSIAndCR(t *testing.T) {
 		t.Fatal(lines)
 	}
 }
+
+func TestKnownLocationsPerTool(t *testing.T) {
+	t.Setenv("ProgramFiles", `C:\Program Files`)
+	t.Setenv("LOCALAPPDATA", `C:\Users\u\AppData\Local`)
+	t.Setenv("APPDATA", `C:\Users\u\AppData\Roaming`)
+	for _, name := range []string{"pnpm", "winget", "brew", "git"} {
+		for _, p := range knownLocations("windows", name) {
+			if strings.Contains(strings.ToLower(p), "node.exe") {
+				t.Fatalf("%s resolves to node: %s", name, p)
+			}
+		}
+	}
+	if len(knownLocations("windows", "brew")) != 0 {
+		t.Fatal("unknown tool should have no locations")
+	}
+}
+
+func TestPnpmCommandUsesNpxCLI(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	root := t.TempDir()
+	nodeDir := filepath.Join(root, "nodejs")
+	cli := filepath.Join(nodeDir, "node_modules", "npm", "bin", "npx-cli.js")
+	must(t, os.MkdirAll(filepath.Dir(cli), 0o755))
+	must(t, os.WriteFile(cli, nil, 0o644))
+	vencord := filepath.Join(root, "Vencord")
+	fakeCheckout(t, vencord)
+	name, args := pnpmCommand(Tool{Path: filepath.Join(nodeDir, "node.exe")}, vencord)
+	if !strings.HasSuffix(name, "node.exe") || len(args) != 3 || args[0] != cli || args[2] != "pnpm@10.4.1" {
+		t.Fatalf("%s %v", name, args)
+	}
+}

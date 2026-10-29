@@ -44,7 +44,7 @@ func openWindow(url string) error {
 		if !exists(b) {
 			continue
 		}
-		cmd := exec.Command(b, "--app="+url, "--window-size=820,900")
+		cmd := exec.Command(b, "--app="+url, "--window-size=620,820")
 		detach(cmd)
 		if cmd.Start() == nil {
 			_ = cmd.Process.Release()
